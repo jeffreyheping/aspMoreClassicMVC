@@ -1,0 +1,37 @@
+/* ============================================================
+   content/site.css  —— 全局样式 (≈ ASP.NET MVC Content/Site.css)
+   ============================================================ */
+
+body {
+    font-family: "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    margin: 20px;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+table td,
+table th {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+}
+
+table th {
+    background: #f0f0f0;
+}
+
+a {
+    color: #0366d6;
+}
+
+.msg {
+    color: green;
+    margin-bottom: 10px;
+}
+
+.err {
+    color: red;
+    margin-bottom: 10px;
+}
