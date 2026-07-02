@@ -9,14 +9,18 @@ Class UserController
 
     Private Model
     Private Bag
+    Private Db
 
     Private Sub Class_Initialize
+        Set Db    = New DbHelper
         Set Model = New UserModel
+        Model.SetDb Db
         Set Bag   = Server.CreateObject("Scripting.Dictionary")
     End Sub
 
     Private Sub Class_Terminate
         Set Model = Nothing
+        Set Db    = Nothing
         Set Bag   = Nothing
     End Sub
 
@@ -29,9 +33,10 @@ Class UserController
         View = viewName
     End Function
 
-    ' 重定向到 Index（类似 ASP.NET MVC 的 RedirectToAction）
+    ' 重定向到 Index（类似 ASP.NET MVC 的 RedirectToAction + TempData）
     Private Function RedirectToIndex(msg)
-        Response.Redirect "default.asp?action=Index&msg=" & Server.URLEncode(msg)
+        Session("_flash") = msg
+        Response.Redirect "default.asp?controller=User&action=Index"
         RedirectToIndex = ""
     End Function
 
@@ -59,8 +64,11 @@ Class UserController
     ' GET /User/Index —— 用户列表
     ' ========================================================
     Public Function Index()
+        Dim flash
+        flash = Session("_flash") & ""
+        Session.Remove "_flash"
         SetBag "users",   Model.GetAll()
-        SetBag "message", Request.QueryString("msg") & ""
+        SetBag "message", flash
         SetBag "title",   "用户管理"
         Index = View("index")
     End Function
@@ -125,7 +133,7 @@ Class UserController
     ' ========================================================
     Public Function Delete()
         Dim userId
-        userId = Request.QueryString("id")
+        userId = Request.Form("id")
         If IsNumeric(userId) Then Model.Delete userId
         Delete = RedirectToIndex("删除成功")
     End Function

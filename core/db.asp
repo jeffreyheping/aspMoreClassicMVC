@@ -25,7 +25,13 @@ Class DbHelper
             connStr = connStr & "; PWD=" & DB_PASS & ";"
         End If
         Set conn = Server.CreateObject("ADODB.Connection")
+        On Error Resume Next
         conn.Open connStr
+        If Err.Number <> 0 Then
+            Response.Write "数据库连接失败，请联系管理员。"
+            Response.End
+        End If
+        On Error GoTo 0
     End Sub
 
     ' ---- 析构 ----

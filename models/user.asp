@@ -44,11 +44,16 @@ Class UserModel
     Private db
 
     Private Sub Class_Initialize
-        Set db = New DbHelper
+        ' db 由外部通过 SetDb 注入，不在此处自行创建
     End Sub
 
     Private Sub Class_Terminate
         Set db = Nothing
+    End Sub
+
+    ' 依赖注入（≈ ASP.NET MVC 构造函数注入 DbContext）
+    Public Sub SetDb(dbInstance)
+        Set db = dbInstance
     End Sub
 
     ' -- 验证 --
