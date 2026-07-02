@@ -1,5 +1,3 @@
-<%@LANGUAGE="VBSCRIPT" CODEPAGE="65001"%>
-<%Option Explicit%>
 <%
 ' ============================================================
 ' core/config.asp
