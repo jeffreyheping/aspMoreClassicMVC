@@ -16,17 +16,21 @@ This project demonstrates how to achieve an ASP.NET MVC-like development experie
 - **MVC separation** — Controllers, Models, and Views each with clear responsibilities
 - **约定优于配置** — 目录结构和命名遵循 ASP.NET MVC 脚手架规范
 - **Convention over Configuration** — Directory structure and naming follow ASP.NET MVC scaffolding conventions
-- **前端控制器** — `default.asp` 统一路由分发
-- **Front Controller** — `default.asp` handles all routing and dispatching
+- **前端控制器 + 双层路由** — `default.asp` 按 `controller` / `action` 两层分发
+- **Front Controller + Two-level Routing** — `default.asp` dispatches by `controller` then `action`
 - **ViewBag 传值** — Controller 通过 `Bag` 字典向 View 传递数据
 - **ViewBag data passing** — Controller passes data to Views via a `Bag` dictionary
+- **TempData / Flash Message** — 用 Session 实现一次性消息，对应 ASP.NET MVC 的 `TempData`
+- **TempData / Flash Message** — One-time messages via Session, equivalent to ASP.NET MVC's `TempData`
+- **依赖注入** — `DbHelper` 由 Controller 创建后注入 `UserModel`，对应构造函数注入
+- **Dependency Injection** — `DbHelper` created by Controller and injected into `UserModel` via `SetDb`
 
 ---
 
 ## 目录结构 / Project Structure
 
 ```
-new3LevelsAsp/
+aspMoreClassicMVC/
 ├── default.asp                        ← 入口 / 路由 (Route Config)
 ├── content/
 │   └── site.css                       ← 全局样式 (≈ Content/Site.css)
@@ -68,10 +72,10 @@ new3LevelsAsp/
 
 ```
 浏览器请求 Browser Request
-    │  ?action=Edit&id=5
+    │  ?controller=User&action=Edit&id=5
     ▼
 default.asp (路由分发 / Route Dispatch)
-    │  Select Case action
+    │  Select Case controller → Select Case action
     ▼
 UserController.Edit() (控制器 / Controller)
     │  调用 Model，设置 ViewBag
@@ -93,7 +97,7 @@ HTML 响应 / HTML Response
 | `Create` | POST | 新增用户，重定向到 Index / Create user, redirect to Index |
 | `Edit` | GET | 编辑表单 / Edit form |
 | `Update` | POST | 保存编辑，重定向到 Index / Save edit, redirect to Index |
-| `Delete` | GET | 删除用户，重定向到 Index / Delete user, redirect to Index |
+| `Delete` | POST | 删除用户，重定向到 Index / Delete user, redirect to Index |
 
 ---
 
@@ -129,6 +133,62 @@ Since ASP Classic's `Server.Execute` cannot pass variables from class methods, t
 所有视图文件在编译期被包含，但只有匹配的视图在运行期实际输出 HTML。
 
 All view files are included at compile time, but only the matching view outputs HTML at runtime.
+
+---
+
+### TempData / Flash Message
+
+Controller 写入 Session，Index Action 读取后立即清除，等同 ASP.NET MVC 的 `TempData`：
+
+Controller writes to Session; the Index action reads and immediately removes it, equivalent to ASP.NET MVC's `TempData`:
+
+```vbscript
+' Controller 写入 / Writing in Controller
+Session("_flash") = "添加成功"
+Response.Redirect "default.asp?controller=User&action=Index"
+
+' Index Action 读取并清除 / Reading and clearing in Index
+flash = Session("_flash") & ""
+Session.Remove "_flash"
+```
+
+---
+
+### 依赖注入 / Dependency Injection
+
+`DbHelper` 由 Controller 创建并通过 `SetDb` 注入 `UserModel`，对应 ASP.NET MVC 中通过构造函数注入 `DbContext`：
+
+`DbHelper` is created by the Controller and injected into `UserModel` via `SetDb`, equivalent to injecting `DbContext` via constructor in ASP.NET MVC:
+
+```vbscript
+' controllers/user_controller.asp
+Set Db    = New DbHelper
+Set Model = New UserModel
+Model.SetDb Db
+
+' models/user.asp
+Public Sub SetDb(dbInstance)
+    Set db = dbInstance
+End Sub
+```
+
+---
+
+### 数据库异常处理 / Database Error Handling
+
+连接失败时显示友好提示而非 IIS 500 错误页：
+
+Displays a friendly message on connection failure instead of an IIS 500 error page:
+
+```vbscript
+On Error Resume Next
+conn.Open connStr
+If Err.Number <> 0 Then
+    Response.Write "数据库连接失败，请联系管理员。"
+    Response.End
+End If
+On Error GoTo 0
+```
 
 ---
 
