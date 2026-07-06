@@ -7,7 +7,7 @@
 <!-- #include file="../shared/_layout_top.asp" -->
 
 <% If Bag("message") <> "" Then %>
-<p class="msg"><%=Server.HTMLEncode(Bag("message"))%></p>
+<p class="msg"><%=Replace(Server.HTMLEncode(Bag("message")), vbCrLf, "<br>")%></p>
 <% End If %>
 <form method="post" action="?controller=User&action=Create">
   姓名:

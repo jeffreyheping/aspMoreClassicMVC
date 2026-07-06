@@ -97,8 +97,12 @@ Class UserController
     Public Function Edit()
         Dim userId, u
         userId = Request.QueryString("id")
-        Set u  = Model.GetById(userId)
+        If Not IsNumeric(userId) Then
+            Edit = RedirectToIndex("无效的用户编号")
+            Exit Function
+        End If
 
+        Set u  = Model.GetById(userId)
         If u Is Nothing Then
             Edit = RedirectToIndex("用户不存在")
             Exit Function
