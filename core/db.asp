@@ -14,15 +14,17 @@ Class DbHelper
         Dim connStr
         If DB_TYPE = "access" Then
             connStr = "Provider=Microsoft.Jet.OLEDB.4.0; Data Source="
-            connStr = connStr & Server.MapPath(DB_SOURCE)
-            If DB_PWD <> "" Then
-                connStr = connStr & "; Jet OLEDB:Database Password=" & DB_PWD
+            connStr = connStr & Server.MapPath(DBaccess_SOURCE)
+            If DBaccess_PWD <> "" Then
+                connStr = connStr & "; Jet OLEDB:Database Password=" & DBaccess_PWD
             End If
         ElseIf DB_TYPE = "sqlsvr" Then
             connStr = "Provider=SQLOLEDB; Server=" & DB_SERVER
             connStr = connStr & "; Database=" & DB_NAME
             connStr = connStr & "; UID=" & DB_USER
             connStr = connStr & "; PWD=" & DB_PASS & ";"
+        ElseIf DB_TYPE = "sqlite" Then 'only works on axonasp(https://g3pix.com.br/axonasp/)
+            connStr = "Driver={SQLite3};Data Source=" & Server.MapPath(DBsqlite_SOURCE)
         End If
         Set conn = Server.CreateObject("ADODB.Connection")
         On Error Resume Next
@@ -33,6 +35,8 @@ Class DbHelper
         End If
         On Error GoTo 0
     End Sub
+
+
 
     ' ---- 析构 ----
     Private Sub Class_Terminate
