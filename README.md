@@ -245,15 +245,33 @@ MIT
 
 This project is already as close to the ASP.NET MVC scaffolding style as possible, but gaps in **VBScript as a language and the ASP Classic runtime** still force some awkward or non-idiomatic compromises. Each item below is annotated with its modern MVC counterpart (e.g. ASP.NET MVC), so readers can trace where the gap comes from.
 
-### 1. 无 OOP 继承 → 无 BaseController
+### 1. 无继承、无组合嵌入 → 无 BaseController
 
-VBScript 的 `Class` 不支持继承，无法抽出公共基类（`BaseController`）来存放 `View()`、`RedirectToAction()`、`SetBag()`、`ErrorSummary()` 等方法。每个 Controller 都必须 **复制** 一份完全相同的辅助代码。
+VBScript 的 `Class` **既不支持继承**（`extends`）**，也不支持结构体嵌入**（embedding）。作为对比：
 
-ASP.NET MVC 中所有 Controller 继承自 `Controller` 基类，公共方法只写一次。
+- **Go 语言**虽然没有 `extends`，但可以通过匿名嵌入获得同等能力：
 
-**VBScript `Class` has no inheritance**, so there's no way to extract a `BaseController` to host `View()`, `RedirectToAction()`, `SetBag()`, `ErrorSummary()`. Every Controller must **copy** identical helper code.
+  ```go
+  type BaseController struct { /* View(), Redirect(), SetBag() ... */ }
+  type UserController struct { BaseController } // 公共方法自动提升
+  ```
 
-In ASP.NET MVC, all controllers inherit from `Controller`, writing the shared helpers once.
+- **C# / ASP.NET MVC** 直接写 `class UserController : Controller` 即可继承基类。
+
+本项目里 `View()`、`RedirectToIndex()`、`SetBag()`、`ErrorSummary()` 等公共方法，只能在每个 Controller 里 **复制一份完全相同的代码**。同时 VBScript 也没有一等函数和 middleware 链的概念，所以连 Go 那种 `r.GET(path, auth, cache, handler)` 的函数组合也做不到。
+
+VBScript `Class` supports **neither inheritance (`extends`) nor struct embedding**. For comparison:
+
+- **Go**, despite lacking `extends`, achieves the same effect via anonymous embedding:
+
+  ```go
+  type BaseController struct { /* View(), Redirect(), SetBag() ... */ }
+  type UserController struct { BaseController } // methods auto-promoted
+  ```
+
+- **C# / ASP.NET MVC** simply writes `class UserController : Controller`.
+
+In this project, shared helpers like `View()`, `RedirectToIndex()`, `SetBag()`, `ErrorSummary()` must be **copied verbatim into every Controller**. VBScript also lacks first-class functions and a middleware chain, so even Go-style function composition (`r.GET(path, auth, cache, handler)`) is out of reach.
 
 ### 2. 无属性（Attribute）装饰 → 验证只能硬编码
 
