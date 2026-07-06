@@ -24,6 +24,8 @@ This project demonstrates how to achieve an ASP.NET MVC-like development experie
 - **TempData / Flash Message** — One-time messages via Session, equivalent to ASP.NET MVC's `TempData`
 - **依赖注入** — `DbHelper` 由 Controller 创建后注入 `UserModel`，对应构造函数注入
 - **Dependency Injection** — `DbHelper` created by Controller and injected into `UserModel` via `SetDb`
+- **与现代 MVC 的差异对照** — 明确列出 VBScript / ASP Classic 限制下无法实现、不得不妥协的部分
+- **Gap analysis vs modern MVC** — Explicitly lists what cannot be implemented under VBScript / ASP Classic constraints and where compromises are made
 
 ---
 
@@ -234,3 +236,112 @@ Database connection settings can be modified in `core/config.asp`.
 ## License
 
 MIT
+
+---
+
+## 与现代 MVC 的差异对照 / Gaps vs Modern MVC
+
+本项目已经尽可能贴近 ASP.NET MVC 的脚手架风格，但 **VBScript 语言和 ASP Classic 运行时** 本身的缺失，仍导致了一些「别扭」或「不地道」的妥协。下列每一项都标注了在现代 MVC（如 ASP.NET MVC）中的对等机制，便于读者理解差异来源。
+
+This project is already as close to the ASP.NET MVC scaffolding style as possible, but gaps in **VBScript as a language and the ASP Classic runtime** still force some awkward or non-idiomatic compromises. Each item below is annotated with its modern MVC counterpart (e.g. ASP.NET MVC), so readers can trace where the gap comes from.
+
+### 1. 无 OOP 继承 → 无 BaseController
+
+VBScript 的 `Class` 不支持继承，无法抽出公共基类（`BaseController`）来存放 `View()`、`RedirectToAction()`、`SetBag()`、`ErrorSummary()` 等方法。每个 Controller 都必须 **复制** 一份完全相同的辅助代码。
+
+ASP.NET MVC 中所有 Controller 继承自 `Controller` 基类，公共方法只写一次。
+
+**VBScript `Class` has no inheritance**, so there's no way to extract a `BaseController` to host `View()`, `RedirectToAction()`, `SetBag()`, `ErrorSummary()`. Every Controller must **copy** identical helper code.
+
+In ASP.NET MVC, all controllers inherit from `Controller`, writing the shared helpers once.
+
+### 2. 无属性（Attribute）装饰 → 验证只能硬编码
+
+没有 `[Required]`、`[Range]`、`[StringLength]` 之类的声明式验证。所有校验逻辑必须写在 `Model.Validate()` 里，无法直接贴在实体字段上。
+
+No `[Required]`, `[Range]`, `[StringLength]` or similar declarative attributes. All validation has to live inside `Model.Validate()`, instead of being attached directly to entity fields.
+
+### 3. 无 Model Binding → 手动读 Request.Form / QueryString
+
+现代 MVC 会将请求数据自动绑定到强类型 Model：`public ActionResult Create(User u)`。本项目只能逐字段读取：`name = Request.Form("name")`。
+
+Modern MVC binds request data automatically to a strongly-typed Model: `public ActionResult Create(User u)`. This project has to read each field manually: `name = Request.Form("name")`.
+
+### 4. 无 Attribute Routing → 硬编码路由
+
+现代框架支持 `[Route("users/{id}")]` 或路由表配置。ASP Classic 的 `#include` 是编译期处理，无法动态加载，只能用 `default.asp` 里的双层 `Select Case` 分发。**每新增一个 Action 都要手动在 `default.asp` 里加一行 `Case`**。
+
+Modern frameworks offer `[Route("users/{id}")]` or route table configuration. ASP Classic's `#include` is resolved at compile time, so routing is a hardcoded two-level `Select Case` in `default.asp`. **Every new Action requires manually adding a `Case` line**.
+
+### 5. 无 Razor 模板引擎 → 条件 `#include` 渲染视图
+
+ASP.NET MVC 使用 Razor (`return View("Edit", model)`) 按需加载视图。本项目在编译期就把 **所有视图** `#include` 进来，再用运行期的 `If viewName = "xxx" Then` 决定输出哪一段（参见 `View()` 方法的实现）。
+
+ASP.NET MVC uses Razor (`return View("Edit", model)`) to load views on demand. This project `#include`s **every view** at compile time, and decides at runtime which block to output via `If viewName = "xxx" Then` (see `View()` implementation).
+
+### 6. 无强类型 ViewBag → 字符串键 + Variant 值
+
+Razor 的 `ViewBag` 是 `dynamic`，IDE 有智能提示。本项目的 `Bag` 是 `Scripting.Dictionary`，键为字符串、值为 `Variant`，键名拼错或值类型用错只能运行时才发现。
+
+Razor's `ViewBag` is `dynamic` with IntelliSense. Here `Bag` is a `Scripting.Dictionary` with string keys and `Variant` values — typos in keys or wrong value types only surface at runtime.
+
+### 7. 无 Layout Section → 只有「头 + 尾」两段布局
+
+Razor 的 `_Layout.cshtml` 支持 `@RenderBody()`、`@RenderSection("scripts")` 等多段占位。本项目只能把布局切为 `_layout_top.asp` 和 `_layout_bottom.asp`，视图夹在中间，无法再定义额外的 section（如 page-specific CSS/JS）。
+
+Razor's `_Layout.cshtml` supports `@RenderBody()`, `@RenderSection("scripts")` and multiple placeholders. Here the layout is only split into `_layout_top.asp` and `_layout_bottom.asp` with the view sandwiched in between — no way to define extra sections (e.g. page-specific CSS/JS).
+
+### 8. 无 HtmlHelper / TagHelper → 手写 HTML 表单
+
+没有 `@Html.TextBoxFor(m => m.Name)`、`@Html.ValidationMessageFor(...)`。表单控件、`validation-summary`、字段回填都得手写，验证失败时也无法自动保留用户已填的值（除非自己用 Session 暂存）。
+
+No `@Html.TextBoxFor(m => m.Name)` or `@Html.ValidationMessageFor(...)`. Form controls, validation summaries and field repopulation are all hand-written, and failed validation cannot automatically preserve the user's input (unless Session is used manually).
+
+### 9. 无 AntiForgeryToken → CSRF 防御缺失
+
+ASP.NET MVC 有 `[ValidateAntiForgeryToken]` + `@Html.AntiForgeryToken()`。本项目没有任何 CSRF 令牌，所有 POST 请求依赖浏览器的同源行为保护。
+
+ASP.NET MVC provides `[ValidateAntiForgeryToken]` + `@Html.AntiForgeryToken()`. This project has no CSRF tokens at all — all POST requests rely on the browser's same-origin behavior.
+
+### 10. 无 DI 容器 → 手工注入
+
+没有 IoC 容器（Autofac、内置 DI），Controller 无法通过构造函数声明依赖、由框架自动解析。`DbHelper` 必须在 Controller 内手工 `New` 出来并传给 Model（`Model.SetDb Db`）。
+
+No IoC container (Autofac, built-in DI), so Controllers cannot declare dependencies for the framework to resolve. `DbHelper` must be `New`ed inside the Controller and passed to the Model manually (`Model.SetDb Db`).
+
+### 11. 无 Action Filter → AOP 能力缺失
+
+无法声明 `[Authorize]`、`[OutputCache]`、`[HandleError]`。权限检查、缓存、异常处理必须在每个 Action 开头手写，没有统一切面。
+
+No `[Authorize]`, `[OutputCache]`, `[HandleError]`. Authentication, caching and error handling must be written at the start of every Action — no unified cross-cutting.
+
+### 12. 无 ORM → 手写 SQL + 手工转义
+
+没有 Entity Framework / Dapper 之类的 ORM。CRUD 是手写 SQL，参数化要么用 `ADODB.Command`，要么像本项目一样用 `Replace(s, "'", "''")` + `CLng()` 手工转义（功能上可行，但不如真正的参数化优雅）。
+
+No ORM like Entity Framework / Dapper. CRUD is hand-written SQL; parameters are either done via `ADODB.Command`, or, as in this project, with `Replace(s, "'", "''")` + `CLng()` (functional, but less elegant than true parameterization).
+
+### 13. 无 TempData API → 手工 Session 管理
+
+ASP.NET MVC 的 `TempData` 有 `Keep()` / `Peek()` 语义。本项目只能用 `Session("_flash")` 手工写、读、清，没有保留或偷看的机制。
+
+ASP.NET MVC's `TempData` has `Keep()` / `Peek()` semantics. This project manually writes, reads and clears `Session("_flash")`, without keep or peek equivalents.
+
+### 14. 无异步 / 无 Task → 所有 I/O 阻塞
+
+VBScript 没有 `async/await`、没有 `Task`。数据库查询、文件读写全部同步阻塞，无法释放线程给其他请求。
+
+VBScript has no `async/await` or `Task`. DB queries and file I/O are all synchronous and blocking, with no way to yield the thread to other requests.
+
+### 15. `<%@LANGUAGE%>` 只能作用于入口页
+
+`<%@LANGUAGE="VBSCRIPT" CODEPAGE="65001"%>` 只对浏览器直接请求的入口页面（`default.asp`）第一行有效，对 `#include` 引入的文件无效。因此 **不能** 把语言/编码声明放到 `config.asp` 或 `_layout_top.asp` 里统一管理。
+
+`<%@LANGUAGE="VBSCRIPT" CODEPAGE="65001"%>` only takes effect on line 1 of the page the browser requests directly (`default.asp`), not on `#include`d files. So the language/encoding declaration **cannot** be centralized into `config.asp` or `_layout_top.asp`.
+
+---
+
+> **小结 / Summary**：
+> 上面 15 条全部来自 **VBScript 语言或 ASP Classic 运行时** 的能力边界，不是设计上的取舍。在同等时间成本下，现代 MVC 框架能免费获得的能力，本项目都需要手工实现或直接放弃。这份清单既是本项目的自白，也是「为什么值得升级到现代框架」的参考依据。
+>
+> **Summary**: All 15 gaps above come from the **capability boundaries of VBScript as a language and ASP Classic as a runtime** — they are not deliberate design trade-offs. For the same engineering effort, capabilities a modern MVC framework gives for free must either be hand-rolled or dropped in this project. This list is both a self-disclosure and a reference for "why upgrading to a modern framework is worthwhile".
