@@ -36,7 +36,7 @@ Class UserController
     ' 重定向到 Index（类似 ASP.NET MVC 的 RedirectToAction + TempData）
     Private Function RedirectToIndex(msg)
         Session("_flash") = msg
-        Response.Redirect "default.asp?controller=User&action=Index"
+        Response.Redirect "?controller=User&action=Index"
         RedirectToIndex = ""
     End Function
 
